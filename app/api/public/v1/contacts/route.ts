@@ -8,6 +8,8 @@ import { sanitizeUUID } from '@/lib/supabase/utils';
 
 export const runtime = 'nodejs';
 
+import { buildContactUpdate } from '@/lib/public-api/contact-upsert';
+
 const ContactUpsertSchema = z.object({
   name: z.string().optional(),
   email: z.string().optional(),
@@ -181,30 +183,23 @@ export async function POST(request: Request) {
   if (existing.error) return NextResponse.json({ error: existing.error.message, code: 'DB_ERROR' }, { status: 500 });
 
   const now = new Date().toISOString();
-  const payload: any = {
-    organization_id: auth.organizationId,
-    email,
-    phone,
-    role: normalizeText(parsed.data.role),
-    company_name: companyName,
-    client_company_id: clientCompanyId,
-    avatar: normalizeText(parsed.data.avatar),
-    status: normalizeText(parsed.data.status),
-    stage: normalizeText(parsed.data.stage),
-    source: normalizeText(parsed.data.source),
-    notes: normalizeText(parsed.data.notes),
-    birth_date: birthDate,
-    last_interaction: lastInteraction,
-    last_purchase_date: lastPurchaseDate,
-    total_value: parsed.data.total_value ?? undefined,
-    updated_at: now,
-  };
 
   if (existing.data?.id) {
-    if (name) payload.name = name;
+    // Só os campos que vieram no pedido. Enviar o payload completo punha a
+    // `null` tudo o que o pedido não trouxesse, em silêncio.
+    const updates = buildContactUpdate(parsed.data, {
+      name,
+      email,
+      phone,
+      companyName,
+      clientCompanyId,
+      birthDate: birthDate as string | null,
+      lastInteraction: lastInteraction as string | null,
+      lastPurchaseDate: lastPurchaseDate as string | null,
+    }, now);
     const { data, error } = await sb
       .from('contacts')
-      .update(payload)
+      .update(updates)
       .eq('id', existing.data.id)
       .select('id,name,email,phone,role,company_name,client_company_id,avatar,notes,status,stage,source,birth_date,last_interaction,last_purchase_date,total_value,created_at,updated_at')
       .single();
@@ -217,9 +212,22 @@ export async function POST(request: Request) {
   }
 
   const insertPayload = {
-    ...payload,
+    organization_id: auth.organizationId,
     name,
+    email,
+    phone,
+    role: normalizeText(parsed.data.role),
+    company_name: companyName,
+    client_company_id: clientCompanyId,
+    avatar: normalizeText(parsed.data.avatar),
+    source: normalizeText(parsed.data.source),
+    notes: normalizeText(parsed.data.notes),
+    birth_date: birthDate,
+    last_interaction: lastInteraction,
+    last_purchase_date: lastPurchaseDate,
+    total_value: parsed.data.total_value ?? undefined,
     created_at: now,
+    updated_at: now,
     status: 'ACTIVE',
     stage: 'LEAD',
   };
