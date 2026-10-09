@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createStaticAdminClient } from '@/lib/supabase/staticAdminClient';
 import type { CRMCallOptions } from '@/types/ai';
+import { buildContactSearchOr } from '@/lib/contacts-search';
 
 /**
  * Creates all CRM tools with context injection
@@ -355,7 +356,7 @@ export function createCRMTools(context: CRMCallOptions, userId: string) {
                     .from('contacts')
                     .select('id, name, email, phone, company_name')
                     .eq('organization_id', organizationId)
-                    .or(`name.ilike.%${query}%,email.ilike.%${query}%`)
+                    .or(buildContactSearchOr(query))
                     .limit(limit);
 
                 return {

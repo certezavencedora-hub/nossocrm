@@ -10,16 +10,14 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData, type QueryKey 
 import { queryKeys } from '../index';
 import { contactsService, companiesService } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { contactMatchesSearch } from '@/lib/contacts-search';
 import type { Contact, ContactStage, Company, PaginationState, PaginatedResponse, ContactsServerFilters } from '@/types';
 
 function matchesContactsServerFilters(contact: Contact, filters?: ContactsServerFilters): boolean {
   if (!filters) return true;
 
-  if (filters.search?.trim()) {
-    const q = filters.search.trim().toLowerCase();
-    const nameOk = (contact.name || '').toLowerCase().includes(q);
-    const emailOk = (contact.email || '').toLowerCase().includes(q);
-    if (!nameOk && !emailOk) return false;
+  if (filters.search?.trim() && !contactMatchesSearch(contact, filters.search)) {
+    return false;
   }
 
   if (filters.stage && filters.stage !== 'ALL') {
@@ -84,12 +82,7 @@ export const useContacts = (filters?: ContactsFilters) => {
           if (filterCompanyId && contact.clientCompanyId !== filterCompanyId && contact.companyId !== filterCompanyId) return false;
           if (filters.stage && contact.stage !== filters.stage) return false;
           if (filters.status && contact.status !== filters.status) return false;
-          if (filters.search) {
-            const search = filters.search.toLowerCase();
-            const matchName = (contact.name || '').toLowerCase().includes(search);
-            const matchEmail = (contact.email || '').toLowerCase().includes(search);
-            if (!matchName && !matchEmail) return false;
-          }
+          if (filters.search && !contactMatchesSearch(contact, filters.search)) return false;
           return true;
         });
       }

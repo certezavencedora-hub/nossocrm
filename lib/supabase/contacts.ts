@@ -16,6 +16,7 @@ import { supabase } from './client';
 import { Contact, CRMCompany, OrganizationId, PaginationState, PaginatedResponse, ContactsServerFilters } from '@/types';
 import { sanitizeUUID, sanitizeText, sanitizeNumber } from './utils';
 import { normalizePhoneE164 } from '@/lib/phone';
+import { buildContactSearchOr } from '@/lib/contacts-search';
 
 // ============================================
 // CONTACTS SERVICE
@@ -319,10 +320,9 @@ export const contactsService = {
 
       // Apply filters
       if (filters) {
-        // T007: Search filter (name OR email)
+        // T007: Search filter (name OR email OR phone)
         if (filters.search && filters.search.trim()) {
-          const searchTerm = filters.search.trim();
-          query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+          query = query.or(buildContactSearchOr(filters.search));
         }
 
         // T008: Stage filter

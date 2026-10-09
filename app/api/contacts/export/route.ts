@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { stringifyCsv, withUtf8Bom, type CsvDelimiter } from '@/lib/utils/csv';
+import { buildContactSearchOr } from '@/lib/contacts-search';
 
 type SortBy = 'name' | 'created_at' | 'updated_at' | 'stage';
 type SortOrder = 'asc' | 'desc';
@@ -59,7 +60,7 @@ export async function GET(req: Request) {
         .is('deleted_at', null);
 
       if (search) {
-        q = q.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+        q = q.or(buildContactSearchOr(search));
       }
       if (stage && stage !== 'ALL') {
         q = q.eq('stage', stage);
